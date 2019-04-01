@@ -1,0 +1,256 @@
+import math
+import numpy
+import random
+import matplotlib.pyplot as plt
+import csv
+
+class MyKNN:
+
+    def readData(self, filename):
+        f = open(filename)
+        data = []
+        for line in f:
+            data_line = line.rstrip("\r\n").split(',')
+            data.append(data_line)
+        return data
+
+
+    def eDistance(self, instance1, instance2):
+        return float(math.sqrt(((float(instance1[2]) - float(instance2[2]))
+                                ** 2) + ((float(instance1[3]) - float(instance2[3])) ** 2)))
+
+
+    def getNeighbors(self, trainingIds, testId, k):
+        # only takes in one single testing ID
+        distanceMatrix = []  # 2d array of trainig id and its distances
+        neigh = []  # type: List[Any] #empty list of final answers
+        for x in range(len(trainingIds)):  # loop through all the trainingIds
+            distanceMatrix.append([trainingIds[x], self.eDistance(testId, trainingIds[x])])
+            # add all of the trainingIds and its distances into the distanceMatrix
+        distanceMatrix.sort(key=lambda x: x[1])
+        # sort by the second element in the distance Matrix which is the distances
+        for i in range(k):
+            neigh.append(distanceMatrix[i][0])  # adds all the closest Training Ids together within number K
+        return neigh  # an accumluation of all the trainingIds, a 2d list here
+
+
+    def judge(self, array):
+        emptylist = []
+        for x in array:
+            emptylist.append(x[1])
+        a = numpy.asarray(emptylist)
+        a = a.tolist()
+        b = max(set(a), key=a.count)
+        return b
+
+
+    def classify(self, k, parsedData, trainingIds, testIds):
+        answerList = []
+        trainNeighbors = [parsedData[i] for i in (trainingIds)]
+        testNeighbors = [parsedData[q] for q in (testIds)]
+        for x in testNeighbors:
+            answerList.append(int(self.judge(self.getNeighbors(trainNeighbors, x, k))))
+        return answerList
+
+
+    def evaluate(self, parsedData, testIds, predictions):
+
+
+        newarray2 = [parsedData[i] for i in (testIds)]
+        unique_values = []
+        index3 = 0
+
+        while index3 < len(newarray2):
+            unique_values.append(newarray2[index3][1])
+            index3+=1
+        v = numpy.unique(unique_values)
+        b = 5
+        a = numpy.zeros(shape=(len(v), len(v))) #construct a 10 by 10 array
+        size_of_v = []
+        temp_index = 0
+        for x in v:
+            size_of_v.append(temp_index)
+            temp_index+=1
+        a = numpy.array(a).tolist()
+        v = numpy.array(v).tolist()
+
+
+        index = 0
+        while index < len(predictions):
+            a[v.index(str(predictions[index]))][v.index(str(newarray2[index][1]))] += 1
+            index += 1
+
+        # Calculating F1 score
+        lst_all_f1scores = []
+        fn = 0
+        fp = 0
+        sum = 0
+        a = numpy.array(a)
+        for x in range(len(a)):
+            tp = a[x][x]
+            for y in range(len(a[x])):
+               fn += a[y][x] #fn has not subtracted tp yet
+               fp += a[x][y] #tn has not subtracted tp yet
+            fn -= tp
+            fp -= tp
+            f1_score = (2*tp)/(2*tp + fp + fn)
+            lst_all_f1scores.append(f1_score)
+            fn = 0
+            fp = 0
+
+        for v in lst_all_f1scores:
+            sum += v
+
+        final_mean = sum/len(a)
+
+        print a
+        print final_mean
+        return final_mean
+
+
+
+#--------------------------------------------------------------------------
+#Report number 1:
+knn = MyKNN() #creating an object
+parsedData = knn.readData('/Users/alan/Downloads/digits-embedding.csv') #reading, parsing the data.
+
+# for x in parsedData:
+#     if int(x[1]) == 0:
+#         plt.plot(float(x[2]), float(x[3]), 'o', color = 'black')
+#     elif int(x[1]) == 1:
+#         plt.plot(float(x[2]), float(x[3]), 'o', color='blue')
+#     elif int(x[1]) == 2:
+#         plt.plot(float(x[2]), float(x[3]), 'o', color='grey')
+#     elif int(x[1]) == 3:
+#         plt.plot(float(x[2]), float(x[3]), 'o', color='red')
+#     elif int(x[1]) == 4:
+#         plt.plot(float(x[2]), float(x[3]), 'o', color='green')
+#     elif int(x[1]) == 5:
+#         plt.plot(float(x[2]), float(x[3]), 'o', color='pink')
+#     elif int(x[1]) == 6:
+#         plt.plot(float(x[2]), float(x[3]), 'o', color='orange')
+#     elif int(x[1]) == 7:
+#         plt.plot(float(x[2]), float(x[3]), 'o', color='yellow')
+#     elif int(x[1]) == 8:
+#         plt.plot(float(x[2]), float(x[3]), 'o', color='purple')
+#     elif int(x[1]) == 9:
+#         plt.plot(float(x[2]), float(x[3]), 'o', color='brown')
+#
+#     plt.title("All data in data file\n[1:black 2:blue 3:grey 4:red 5:green"
+#               " 6: orange 7: yellow 8: purple 9:brown]")
+#     plt.xlabel("x points")
+#     plt.ylabel("y points")
+#
+# plt.show()
+
+
+test_data = []
+train_data = []
+index = 0
+while index< 10000:
+    train_data.append(index)
+    index+=2
+
+index2 = 1
+while index2 < 10000:
+    test_data.append(index2)
+    index2+=2
+
+q_list = [1,5,15,31, len(train_data)]
+x_axis_plot = []
+for x in q_list:
+    predictions = knn.classify(x, parsedData, train_data, test_data) #classify
+    f1 = knn.evaluate(parsedData, test_data, predictions)
+    x_axis_plot.append(f1)
+
+
+plt.plot(q_list[0:4], x_axis_plot[0:4])
+plt.ylabel('average f1 scores')
+plt.xlabel('k')
+plt.title('F1 score to K')
+plt.show()
+
+
+
+# evaluate(readData('/Users/alan/Downloads/digits-embedding.csv'), test_data,
+#          classify(70, readData('/Users/alan/Downloads/digits-embedding.csv'), train_data, test_data))
+
+# knn = MyKNN() #creating an object
+# parsedData = MyKNN().readData("/Users/alan/Downloads/digits-embedding.csv") #reading, parsing the data.
+# predictions = knn.classify(5, parsedData, [1,2,3,4,5,6,7,8,9,10], [11,12,13,14,15,16,17,18,19,20]) #classify
+# f1 = MyKNN.evaluate(MyKNN().readData('/Users/alan/Downloads/digits-embedding.csv'), [11,12,13,14,15,16,17,18,19,20],
+#                     MyKNN().classify(5, MyKNN.readData("/Users/alan/Downloads/digits-embedding.csv"), [1,2,3,4,5,6,7,8,9,10], [11,12,13,14,15,16,17,18,19,20])) #calculating the f1 score for the classification
+#
+
+
+# evaluate(readData('/Users/alan/Downloads/digits-embedding.csv'), temp_test_data,
+#     classify(33, readData('/Users/alan/Downloads/digits-embedding.csv'), temp_train_data, temp_test_data))
+
+# classify(33, readData('/Users/alan/Downloads/digits-embedding.csv'), temp_train_data, temp_test_data)
+
+# lst = []
+# for i in temp_test_data:
+#     lst.append(readData('/Users/alan/Downloads/digits-embedding.csv')[i][1])
+# print lst
+
+
+# with open('/Users/alan/Downloads/digits-embedding.csv', "rb") as f:
+#     data = f.read().rstrip("\r").split('\n')
+#
+# random.shuffle(data)
+#
+# train_data = data[80:]
+# test_data = data[:20]
+#
+# classify(5, readData('/Users/alan/Downloads/digits-embedding.csv'),train_data,test_data)
+#
+#
+
+
+# def classify(k, parsedData, trainingIds, testIds):
+#     distanceMatrix = []
+#     neigh = []
+#     for x in range(len(trainingIds)):
+#         distanceMatrix.append(x, distance(testIds, x))
+#         distanceMatrix.sort()
+#         for i in range(k):
+#             neigh.append(i[0])
+#     return neigh
+#
+#
+# def distance(instance1, instance2):
+#     instance1 = numpy.array(instance1)
+#     instance2 = numpy.array(instance2)
+#     print numpy.linalg.norm(instance1 - instance2)
+#     return numpy.linalg.norm(instance1 - instance2)
+#
+#
+# import math
+# def euclideanDistance(instance1, instance2, length):
+# 	distance = 0
+# 	for x in range(length):
+# 		distance += pow((instance1[x] - instance2[x]), 2)
+# 	return math.sqrt(distance)
+#
+# def euclideanDistance(instance1, instance2, length):
+# 	distance = 0
+# 	for x in range(length):
+# 		distance += pow((instance1[x] - instance2[x]), 2)
+# 	return math.sqrt(distance)
+#
+# distance([1,2,3,4,5], [12,12,13,14,15])
+# classify(5, readData('/Users/alan/Downloads/digits-embedding.csv'), [2,4,6], [1,3,5])
+#
+
+
+#
+# lines = (parsedData)
+# dataset = list(lines)
+# for x in range(len(dataset) - 1):
+#     for y in range(4):
+#         dataset[x][y] = float(dataset[x][y])
+#     if random.random() < k:
+#         trainingIds.append(dataset[x])
+#     else:
+#         testIds.append(dataset[x])
+
